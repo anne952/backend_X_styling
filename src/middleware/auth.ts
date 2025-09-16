@@ -31,8 +31,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const payload = jwt.verify(token, secret) as AuthUser;
     
     // Vérifier que le token existe dans la base de données
-    const user = await prisma.users.findUnique({
-      where: { 
+    const user = await prisma.users.findFirst({
+      where: {
         id: payload.id,
         token: token
       },

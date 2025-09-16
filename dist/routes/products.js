@@ -14,8 +14,35 @@ router.get('/', async (_req, res) => {
 });
 // Create product (admin or vendeur)
 router.post('/', auth_1.authenticate, (0, auth_1.requireRoles)('admin', 'vendeur'), async (req, res) => {
-    const { nom, description, prix, image, taille, categorieId } = req.body;
-    const created = await prisma_1.default.produit.create({ data: { nom, description, prix, image, taille, categorieId } });
+    const { nom, description, prix, image, taille } = req.body;
+    const categorieId = Number(req.body.categorieId);
+    if (!categorieId || Number.isNaN(categorieId)) {
+        return res.status(400).json({ message: 'categorieId invalide' });
+    }
+    const cat = await prisma_1.default.categorie.findUnique({ where: { id: categorieId } });
+    if (!cat) {
+        return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
+    }
+    // Déterminer le vendeurId
+    let vendeurId;
+    if (req.user.role === 'vendeur') {
+        vendeurId = req.user.id;
+    }
+    else {
+        const bodyVendeurId = req.body.vendeurId;
+        if (bodyVendeurId !== undefined && bodyVendeurId !== null) {
+            const vid = Number(bodyVendeurId);
+            if (Number.isNaN(vid)) {
+                return res.status(400).json({ message: 'vendeurId invalide' });
+            }
+            const vendeur = await prisma_1.default.users.findUnique({ where: { id: vid } });
+            if (!vendeur || vendeur.role !== 'vendeur') {
+                return res.status(400).json({ message: `vendeurId ${vid} invalide (utilisateur introuvable ou rôle ≠ vendeur)` });
+            }
+            vendeurId = vid;
+        }
+    }
+    const created = await prisma_1.default.produit.create({ data: { nom, description, prix, image: image ?? null, taille, categorieId, vendeurId } });
     res.status(201).json(created);
 });
 // Delete product (admin or vendeur)

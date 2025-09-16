@@ -10,14 +10,18 @@ const router = (0, express_1.Router)();
 // Create order (client)
 router.post('/', auth_1.authenticate, (0, auth_1.requireRoles)('client'), async (req, res) => {
     const { items, localisation } = req.body;
-    const montant = items.reduce((sum, i) => sum + Number(i.prixUnitaire) * i.quantité, 0);
+    // Validation des données requises
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: 'Le champ items est requis et doit être un tableau non vide' });
+    }
+    const montantNum = items.reduce((sum, i) => sum + Number(i.prixUnitaire) * i.quantite, 0);
     const order = await prisma_1.default.commande.create({
         data: {
             usersId: req.user.id,
             localisation,
-            montant,
+            montant: montantNum.toString(),
             ligneCommande: {
-                create: items.map(i => ({ produitId: i.produitId, quantité: i.quantité, prixUnitaire: i.prixUnitaire, total: (Number(i.prixUnitaire) * i.quantité).toString() }))
+                create: items.map(i => ({ produitId: i.produitId, quantite: i.quantite, prixUnitaire: i.prixUnitaire, total: (Number(i.prixUnitaire) * i.quantite).toString() }))
             }
         },
         include: { ligneCommande: true }
@@ -27,7 +31,7 @@ router.post('/', auth_1.authenticate, (0, auth_1.requireRoles)('client'), async 
 // Validate order (admin or vendeur)
 router.post('/:id/validate', auth_1.authenticate, (0, auth_1.requireRoles)('admin', 'vendeur'), async (req, res) => {
     const id = Number(req.params.id);
-    const updated = await prisma_1.default.commande.update({ where: { id }, data: { status: 'enStoke' } });
+    const updated = await prisma_1.default.commande.update({ where: { id }, data: { status: 'en_cours_pour_la_livraison' } });
     res.json(updated);
 });
 // Get my orders (client)

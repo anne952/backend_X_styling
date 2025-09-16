@@ -13,6 +13,7 @@ const products_1 = __importDefault(require("./routes/products"));
 const orders_1 = __importDefault(require("./routes/orders"));
 const stats_1 = __importDefault(require("./routes/stats"));
 const reviews_1 = __importDefault(require("./routes/reviews"));
+const categories_1 = __importDefault(require("./routes/categories"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -27,7 +28,8 @@ app.use('/api/products', products_1.default);
 app.use('/api/orders', orders_1.default);
 app.use('/api/stats', stats_1.default);
 app.use('/api/reviews', reviews_1.default);
-const PORT = process.env.PORT || 3000;
+app.use('/api/categories', categories_1.default);
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server running on port ${PORT}`);

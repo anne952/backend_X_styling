@@ -14,12 +14,20 @@ router.get('/', async (_req, res) => {
 router.post('/', authenticate, requireRoles('admin', 'vendeur'), async (req, res) => {
   const { nom, description, prix, image, taille } = req.body as { nom: string; description: string; prix: string; image?: string | null; taille: 'L'|'S'|'M'|'XL'|'XXL'|'XXXL'; };
   const categorieId = Number((req.body as any).categorieId);
+  const couleurId = Number((req.body as any).couleurId);
   if (!categorieId || Number.isNaN(categorieId)) {
     return res.status(400).json({ message: 'categorieId invalide' });
   }
   const cat = await prisma.categorie.findUnique({ where: { id: categorieId } });
   if (!cat) {
     return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
+  }
+  if (!couleurId || Number.isNaN(couleurId)) {
+    return res.status(400).json({ message: 'couleurId invalide' });
+  }
+  const color = await prisma.couleur.findUnique({ where: { id: couleurId } });
+  if (!color) {
+    return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
   }
 
   // Déterminer le vendeurId
@@ -41,7 +49,7 @@ router.post('/', authenticate, requireRoles('admin', 'vendeur'), async (req, res
     }
   }
 
-  const created = await prisma.produit.create({ data: { nom, description, prix, image: image ?? null, taille, categorieId, vendeurId } });
+  const created = await prisma.produit.create({ data: { nom, description, prix, image: image ?? null, taille, categorieId, couleurId, vendeurId } });
   res.status(201).json(created);
 });
 

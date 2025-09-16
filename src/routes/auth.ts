@@ -78,6 +78,7 @@ const registerSchema = z.object({
   password: z.string().min(6),
   nom: z.string().min(2),
   role: z.enum(['client', 'vendeur']).optional().default('client'),
+  photoProfil: z.string().url().optional(),
   // Champs spécifiques aux vendeurs
   localisation: z.string().trim().min(1).optional(),
   telephone: telephoneInput.optional(),
@@ -108,7 +109,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Données invalides', errors: parsed.error.format() });
     }
 
-    const { email, password, nom, role, localisation, telephone, typeCouture, commentaire, specialite } = parsed.data;
+    const { email, password, nom, role, photoProfil, localisation, telephone, typeCouture, commentaire, specialite } = parsed.data;
     
     // Vérifier si l'email existe déjà
     const exists = await prisma.users.findUnique({ where: { email } });
@@ -127,6 +128,7 @@ router.post('/register', async (req, res) => {
         nom, 
         role,
         token,
+        photoProfil,
         localisation,
         telephone,
         typeCouture: typeCouture ?? undefined,
@@ -139,6 +141,7 @@ router.post('/register', async (req, res) => {
         nom: true,
         role: true,
         token: true,
+        photoProfil: true,
         localisation: true,
         telephone: true,
         typeCouture: true,
@@ -154,6 +157,7 @@ router.post('/register', async (req, res) => {
         email: user.email,
         nom: user.nom,
         role: user.role,
+        photoProfil: user.photoProfil,
         localisation: user.localisation,
         telephone: user.telephone,
         typeCouture: user.typeCouture,
@@ -205,6 +209,7 @@ router.post('/login', async (req, res) => {
         email: user.email, 
         nom: user.nom,
         role: user.role,
+        photoProfil: user.photoProfil,
         localisation: user.localisation,
         telephone: user.telephone,
         typeCouture: user.typeCouture,
@@ -246,6 +251,7 @@ router.get('/me', authenticate, async (req, res) => {
         email: true,
         nom: true,
         role: true,
+        photoProfil: true,
         localisation: true,
         telephone: true,
         typeCouture: true,
@@ -270,6 +276,7 @@ const updateVendorSchema = z.object({
   nom: z.string().min(2).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
+  photoProfil: z.string().url().optional(),
   localisation: z.string().trim().min(1).optional(),
   telephone: telephoneInput.optional(),
   typeCouture: normalizeTypeCoutureInput.optional(),
@@ -290,7 +297,7 @@ router.put('/profile', authenticate, async (req, res) => {
     }
 
     const userId = req.user!.id;
-    const { nom, email, password, localisation, telephone, typeCouture, commentaire, specialite } = parsed.data;
+    const { nom, email, password, photoProfil, localisation, telephone, typeCouture, commentaire, specialite } = parsed.data;
 
     // Vérifier l'unicité de l'email si fourni
     if (email) {
@@ -309,6 +316,7 @@ router.put('/profile', authenticate, async (req, res) => {
         nom,
         email,
         ...(hashedPassword && { password: hashedPassword }),
+        photoProfil,
         localisation,
         telephone,
         typeCouture: typeCouture ?? undefined,
@@ -320,6 +328,7 @@ router.put('/profile', authenticate, async (req, res) => {
         email: true,
         nom: true,
         role: true,
+        photoProfil: true,
         localisation: true,
         telephone: true,
         typeCouture: true,

@@ -9,6 +9,7 @@ import orderRoutes from './routes/orders';
 import statsRoutes from './routes/stats';
 import reviewRoutes from './routes/reviews';
 import categoryRoutes from './routes/categories';
+import colorRoutes from './routes/colors';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/colors', colorRoutes);
 
 const PORT = process.env.PORT || 4000;
 

@@ -15,6 +15,7 @@ model Users {
   role             Role
   token            String?     @unique
   telephone        String?
+  photoProfil      String?
   typeCouture      TypeCouture[]
   commentaire      String?
   localisation     String?
@@ -81,6 +82,8 @@ model Produit {
   taille         Taille
   categorieId    Int
   categorie      Categorie       @relation(fields: [categorieId], references: [id])
+  couleurId      Int
+  couleur        Couleur         @relation(fields: [couleurId], references: [id])
   ligneCommande  LigneCommande[]
   vendeurId      Int?
   vendeur        Users?          @relation(fields: [vendeurId], references: [id])
@@ -91,6 +94,12 @@ model Produit {
 model Categorie {
   id        Int       @id @default(autoincrement())
   type      TypeCategorie
+  produits  Produit[]
+}
+
+model Couleur {
+  id        Int      @id @default(autoincrement())
+  nom       String   @unique
   produits  Produit[]
 }
 
