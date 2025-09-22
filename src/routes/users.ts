@@ -161,5 +161,24 @@ router.put('/me', authenticate, async (req, res) => {
   }
 });
 
+// Enregistrer le token push Expo pour l'utilisateur courant
+router.post('/me/expo-push-token', authenticate, async (req, res) => {
+  try {
+    const token = (req.body as any)?.expoPushToken;
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ message: 'expoPushToken requis' });
+    }
+    const updated = await prisma.users.update({
+      where: { id: req.user!.id },
+      data: { expoPushToken: token },
+      select: { id: true, expoPushToken: true }
+    });
+    return res.json(updated);
+  } catch (error) {
+    console.error('Erreur enregistrement expoPushToken:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 export default router;
 
