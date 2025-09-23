@@ -11,7 +11,9 @@ import reviewRoutes from './routes/reviews';
 import categoryRoutes from './routes/categories';
 import colorRoutes from './routes/colors';
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const app = express();
 
