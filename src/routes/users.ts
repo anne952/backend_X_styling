@@ -7,6 +7,11 @@ import { authenticate, requireRoles } from '../middleware/auth';
 
 const router = Router();
 
+router.post('/admin/bootstrap-test', (_req, res) => {
+  res.json({ ok: true });
+});
+
+
 
 router.get('/:id/products', authenticate, requireRoles('admin'), async (req, res) => {
   const id = Number(req.params.id);
