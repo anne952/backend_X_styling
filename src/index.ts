@@ -15,16 +15,25 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
+// Vérifie que la variable DATABASE_URL est définie
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set. Exiting...');
+  process.exit(1);
+}
+
 const app = express();
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
@@ -34,10 +43,9 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/colors', colorRoutes);
 
+// Port fourni par Render
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
-
