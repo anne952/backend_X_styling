@@ -10,6 +10,19 @@ async function main() {
     update: { password, role: 'admin', nom: 'Admin' },
     create: { nom: 'Admin', email: 'admin@example.com', password, role: 'admin' }
   });
+
+  // Ajout de couleurs d'exemple
+  await prisma.couleur.createMany({
+    data: [
+      { nom: 'Rouge', hex: '#FF0000' },
+      { nom: 'Bleu', hex: '#0000FF' },
+      { nom: 'Vert', hex: '#00FF00' },
+      { nom: 'Jaune', hex: '#FFFF00' },
+      { nom: 'Noir', hex: '#000000' },
+      { nom: 'Blanc', hex: '#FFFFFF' }
+    ],
+    skipDuplicates: true
+  });
 }
 
 main()

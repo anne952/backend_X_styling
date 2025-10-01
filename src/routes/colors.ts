@@ -13,11 +13,12 @@ router.get('/', async (_req, res) => {
 // Create color (admin)
 router.post('/', authenticate, requireRoles('admin'), async (req, res) => {
   const nom = (req.body as any)?.nom;
+  const hex = (req.body as any)?.hex;
   if (!nom || typeof nom !== 'string' || !nom.trim()) {
     return res.status(400).json({ message: 'nom de couleur requis' });
   }
   try {
-    const created = await prisma.couleur.create({ data: { nom: nom.trim() } });
+    const created = await prisma.couleur.create({ data: { nom: nom.trim(), hex: hex ?? null } });
     return res.status(201).json(created);
   } catch (e: any) {
     if (e.code === 'P2002') {

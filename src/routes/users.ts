@@ -7,6 +7,29 @@ import { authenticate, requireRoles } from '../middleware/auth';
 
 const router = Router();
 
+
+router.get('/:id/products', authenticate, requireRoles('admin'), async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ message: 'id invalide' });
+  const produits = await prisma.produit.findMany({
+    where: { vendeurId: id },
+    include: { productImages: true }
+  });
+  res.json(produits);
+});
+
+
+
+router.get('/:id', authenticate, requireRoles('admin'), async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ message: 'id invalide' });
+  const users = await prisma.users.findUnique({ where: { id } });
+  if (!users) return res.status(404).json({ message: 'Utilisateur introuvable' });
+  res.json(users);
+});
+
+
+
 const updateMeSchema = z.object({
   nom: z.string().min(2).optional(),
   email: z.string().email().optional(),

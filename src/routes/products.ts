@@ -1,64 +1,158 @@
-import { Router } from 'express';
-import prisma from '../prisma';
-import { authenticate, requireRoles } from '../middleware/auth';
+import { Router } from "express";
+import { Prisma } from "@prisma/client";  
+import prisma from "../prisma";          
+
+import { authenticate, requireRoles } from "../middleware/auth";
 
 const router = Router();
 
-// Public list products
-router.get('/', async (_req, res) => {
-  const produits = await prisma.produit.findMany({ include: { categorie: true } });
+// --- GET produits (publique, avec pagination)
+router.get("/", async (req, res) => {
+  const skip = Number(req.query.skip) || 0;
+  const take = Number(req.query.take) || 20;
+
+  const produits = await prisma.produit.findMany({
+    skip,
+    take,
+    include: { categorie: true, productImages: true, couleurs: { include: { couleur: true } } },
+    orderBy: { id: "desc" },
+  });
+
   res.json(produits);
 });
 
-// Create product (admin or vendeur)
-router.post('/', authenticate, requireRoles('admin', 'vendeur'), async (req, res) => {
-  const { nom, description, prix, image, taille } = req.body as { nom: string; description: string; prix: string; image?: string | null; taille: 'L'|'S'|'M'|'XL'|'XXL'|'XXXL'; };
-  const categorieId = Number((req.body as any).categorieId);
-  const couleurId = Number((req.body as any).couleurId);
-  if (!categorieId || Number.isNaN(categorieId)) {
-    return res.status(400).json({ message: 'categorieId invalide' });
-  }
-  const cat = await prisma.categorie.findUnique({ where: { id: categorieId } });
-  if (!cat) {
-    return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
-  }
-  if (!couleurId || Number.isNaN(couleurId)) {
-    return res.status(400).json({ message: 'couleurId invalide' });
-  }
-  const color = await prisma.couleur.findUnique({ where: { id: couleurId } });
-  if (!color) {
-    return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
-  }
+// --- POST produit (admin ou vendeur)
+router.post(
+  "/",
+  authenticate,
+  requireRoles("admin", "vendeur"),
+  async (req, res) => {
+    try {
+      const {
+        nom,
+        description,
+        prix,
+        taille,
+        video,
+        images,
+      } = req.body as {
+        nom: string;
+        description: string;
+        prix: string;
+        taille: "L" | "S" | "M" | "XL" | "XXL" | "XXXL";
+        video?: string;
+        images?: string[];
+      };
 
-  // Déterminer le vendeurId
-  let vendeurId: number | undefined;
-  if (req.user!.role === 'vendeur') {
-    vendeurId = req.user!.id;
-  } else {
-    const bodyVendeurId = (req.body as any).vendeurId;
-    if (bodyVendeurId !== undefined && bodyVendeurId !== null) {
-      const vid = Number(bodyVendeurId);
-      if (Number.isNaN(vid)) {
-        return res.status(400).json({ message: 'vendeurId invalide' });
+      const categorieId = Number((req.body as any).categorieId);
+      const couleurId = Number((req.body as any).couleurId);
+
+      // --- Validation categorie
+      if (!categorieId || Number.isNaN(categorieId)) {
+        return res.status(400).json({ message: "categorieId invalide" });
       }
-      const vendeur = await prisma.users.findUnique({ where: { id: vid } });
-      if (!vendeur || vendeur.role !== 'vendeur') {
-        return res.status(400).json({ message: `vendeurId ${vid} invalide (utilisateur introuvable ou rôle ≠ vendeur)` });
+      const cat = await prisma.categorie.findUnique({ where: { id: categorieId } });
+      if (!cat) {
+        return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
       }
-      vendeurId = vid;
+
+      // --- Validation couleur
+      if (!couleurId || Number.isNaN(couleurId)) {
+        return res.status(400).json({ message: "couleurId invalide" });
+      }
+      const color = await prisma.couleur.findUnique({ where: { id: couleurId } });
+      if (!color) {
+        return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
+      }
+
+      // --- Déterminer le vendeurId
+      let vendeurId: number | undefined;
+      if (req.user!.role === "vendeur") {
+        vendeurId = req.user!.id;
+      } else {
+        const bodyVendeurId = (req.body as any).vendeurId;
+        if (bodyVendeurId !== undefined && bodyVendeurId !== null) {
+          const vid = Number(bodyVendeurId);
+          if (Number.isNaN(vid)) {
+            return res.status(400).json({ message: "vendeurId invalide" });
+          }
+          const vendeur = await prisma.users.findUnique({ where: { id: vid } });
+          if (!vendeur || vendeur.role !== "vendeur") {
+            return res.status(400).json({
+              message: `vendeurId ${vid} invalide (utilisateur introuvable ou rôle ≠ vendeur)`,
+            });
+          }
+          vendeurId = vid;
+        }
+      }
+
+      // --- Validation images et vidéo obligatoires
+      if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ message: "Au moins une image est requise pour le produit" });
+      }
+
+      // --- Création du produit
+      const created = await prisma.produit.create({
+        data: {
+          nom,
+          description,
+          prix: new Prisma.Decimal(prix),
+          taille,
+          categorieId,
+          vendeurId,
+          video,
+          couleurs: { create: [{ couleurId }] },
+        },
+      });
+
+      // --- Créer les images du produit
+      const productImages = images.map((url: string) => ({
+        url,
+        productId: created.id,
+      }));
+      await prisma.productImage.createMany({ data: productImages });
+
+      // --- Retourner le produit complet
+      const productWithRelations = await prisma.produit.findUnique({
+        where: { id: created.id },
+        include: { categorie: true, productImages: true, couleurs: { include: { couleur: true } } },
+      });
+
+      res.status(201).json(productWithRelations);
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ message: "Erreur serveur lors de la création du produit" });
     }
   }
+);
 
-  const created = await prisma.produit.create({ data: { nom, description, prix, image: image ?? null, taille, categorieId, couleurId, vendeurId } });
-  res.status(201).json(created);
-});
+// --- DELETE produit (admin ou vendeur)
+router.delete(
+  "/:id",
+  authenticate,
+  requireRoles("admin", "vendeur"),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ message: "id invalide" });
 
-// Delete product (admin or vendeur)
-router.delete('/:id', authenticate, requireRoles('admin', 'vendeur'), async (req, res) => {
-  const id = Number(req.params.id);
-  await prisma.produit.delete({ where: { id } });
-  res.status(204).send();
-});
+    try {
+      const product = await prisma.produit.findUnique({ where: { id } });
+      if (!product) return res.status(404).json({ message: "Produit introuvable" });
+
+      if (req.user!.role === "vendeur" && product.vendeurId !== req.user!.id) {
+        return res.status(403).json({ message: "Accès interdit" });
+      }
+
+      await prisma.produit.delete({ where: { id } });
+      res.status(204).send();
+    } catch (err: any) {
+      if (err.code === "P2025") {
+        return res.status(404).json({ message: "Produit introuvable" });
+      }
+      console.error(err);
+      res.status(500).json({ message: "Erreur serveur lors de la suppression" });
+    }
+  }
+);
 
 export default router;
-
