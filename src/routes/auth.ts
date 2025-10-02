@@ -119,15 +119,14 @@ router.post('/register', async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const secret = process.env.JWT_SECRET || 'dev-secret';
-    const token = jwt.sign({ email }, secret, { expiresIn: '7d' });
 
-    const user = await prisma.users.create({ 
-      data: { 
-        email, 
-        password: hashed, 
-        nom, 
+    // Crée l'utilisateur sans token
+    const created = await prisma.users.create({
+      data: {
+        email,
+        password: hashed,
+        nom,
         role,
-        token,
         photoProfil,
         localisation,
         telephone,
@@ -140,7 +139,6 @@ router.post('/register', async (req, res) => {
         email: true,
         nom: true,
         role: true,
-        token: true,
         photoProfil: true,
         localisation: true,
         telephone: true,
@@ -150,21 +148,25 @@ router.post('/register', async (req, res) => {
       }
     });
 
-    return res.status(201).json({ 
+    // Génère le token avec id et rôle
+    const token = jwt.sign({ id: created.id, role: created.role }, secret, { expiresIn: '7d' });
+    await prisma.users.update({ where: { id: created.id }, data: { token } });
+
+    return res.status(201).json({
       message: 'Utilisateur créé avec succès',
       user: {
-        id: user.id,
-        email: user.email,
-        nom: user.nom,
-        role: user.role,
-        photoProfil: user.photoProfil,
-        localisation: user.localisation,
-        telephone: user.telephone,
-        typeCouture: user.typeCouture,
-        commentaire: user.commentaire,
-        specialite: user.specialite
+        id: created.id,
+        email: created.email,
+        nom: created.nom,
+        role: created.role,
+        photoProfil: created.photoProfil,
+        localisation: created.localisation,
+        telephone: created.telephone,
+        typeCouture: created.typeCouture,
+        commentaire: created.commentaire,
+        specialite: created.specialite
       },
-      token: user.token
+      token
     });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);
