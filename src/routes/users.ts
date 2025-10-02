@@ -210,4 +210,3 @@ router.post('/me/expo-push-token', authenticate, async (req, res) => {
 });
 
 export default router;
-
