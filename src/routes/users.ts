@@ -173,21 +173,22 @@ router.put('/me', authenticate, async (req, res) => {
     // Hasher le mot de passe si fourni
     const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
 
-    const updateData: any = { nom, email, ...(hashedPassword && { password: hashedPassword }) };
-    if (photoProfil !== undefined) updateData.photoProfil = photoProfil;
+    const data: any = {};
+    if (nom) data.nom = nom;
+    if (email) data.email = email;
+    if (photoProfil) data.photoProfil = photoProfil;
+    if (hashedPassword) data.password = hashedPassword;
 
     const updated = await prisma.users.update({
-      where: { id: userId },
-      data: updateData,
-      select: ({ id: true, email: true, nom: true, role: true, photoProfil: true } as any)
+      where: { id: req.user!.id },
+      data
     });
-
-    res.json(updated);
+    res.json({ message: 'Profil mis à jour avec succès', user: updated });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du profil:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du profil.' });
   }
 });
+
 
 // Enregistrer le token push Expo pour l'utilisateur courant
 router.post('/me/expo-push-token', authenticate, async (req, res) => {
