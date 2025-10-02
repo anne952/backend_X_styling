@@ -43,6 +43,18 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/colors', colorRoutes);
 
+
+console.log("🚀 Routes chargées :");
+console.log(" - /api/auth ->", typeof authRoutes);
+console.log(" - /api/users ->", typeof userRoutes);
+console.log(" - /api/products ->", typeof productRoutes);
+console.log(" - /api/orders ->", typeof orderRoutes);
+console.log(" - /api/stats ->", typeof statsRoutes);
+console.log(" - /api/reviews ->", typeof reviewRoutes);
+console.log(" - /api/categories ->", typeof categoryRoutes);
+console.log(" - /api/colors ->", typeof colorRoutes);
+
+
 // Port fourni par Render
 const PORT = process.env.PORT || 4000;
 

@@ -17,7 +17,7 @@ const authenticate = async (req, res, next) => {
         const secret = process.env.JWT_SECRET || 'dev-secret';
         const payload = jsonwebtoken_1.default.verify(token, secret);
         // Vérifier que le token existe dans la base de données
-        const user = await prisma_1.default.users.findUnique({
+        const user = await prisma_1.default.users.findFirst({
             where: {
                 id: payload.id,
                 token: token

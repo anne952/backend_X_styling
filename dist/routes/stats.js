@@ -31,4 +31,37 @@ router.get('/users/line', auth_1.authenticate, (0, auth_1.requireRoles)('admin')
     const counts = await prisma_1.default.users.groupBy({ by: ['id'] });
     res.json(counts.length);
 });
+router.get('/vendeur/:id', auth_1.authenticate, async (req, res) => {
+    const vendeurId = Number(req.params.id);
+    if (Number.isNaN(vendeurId)) {
+        return res.status(400).json({ message: 'ID vendeur invalide' });
+    }
+    const vendeur = await prisma_1.default.users.findUnique({
+        where: { id: vendeurId },
+        select: {
+            id: true,
+            nom: true,
+            email: true,
+            photoProfil: true,
+            role: true,
+            typeCouture: true,
+            specialite: true,
+            commentaire: true,
+            localisation: true
+        }
+    });
+    if (!vendeur || vendeur.role !== 'vendeur') {
+        return res.status(404).json({ message: 'Vendeur introuvable' });
+    }
+    // Compter le nombre de produits
+    const nombreProduits = await prisma_1.default.produit.count({ where: { vendeurId } });
+    // Compter le total des likes sur ses produits
+    const totalLikes = await prisma_1.default.like.count({
+        where: { produit: { vendeurId } }
+    });
+    res.json({
+        vendeur,
+        stats: { nombreProduits, totalLikes }
+    });
+});
 exports.default = router;
