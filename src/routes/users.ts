@@ -25,7 +25,7 @@ router.get('/:id/products', authenticate, requireRoles('admin'), async (req, res
 
 
 
-router.get('/:id', authenticate, requireRoles('admin'), async (req, res) => {
+router.get('/:id', authenticate, requireRoles('admin', 'client'), async (req, res) => {
   const id = Number(req.params.id);
   if (Number.isNaN(id)) return res.status(400).json({ message: 'id invalide' });
   const users = await prisma.users.findUnique({ where: { id } });
