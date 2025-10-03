@@ -27,6 +27,7 @@ router.get("/", async (req, res) => {
 });
 
 // --- POST produit (admin ou vendeur)
+// --- POST produit (admin ou vendeur)
 router.post(
   "/",
   authenticate,
@@ -117,10 +118,15 @@ router.post(
       }));
       await prisma.productImage.createMany({ data: productImages });
 
-      // --- Retourner le produit complet
+      // --- Retourner le produit complet AVEC vendeur
       const productWithRelations = await prisma.produit.findUnique({
         where: { id: created.id },
-        include: { categorie: true, productImages: true, couleurs: { include: { couleur: true } } },
+        include: {
+          categorie: true,
+          productImages: true,
+          couleurs: { include: { couleur: true } },
+          vendeur: { select: { id: true, email: true, telephone: true } },
+        },
       });
 
       res.status(201).json(productWithRelations);
@@ -130,34 +136,3 @@ router.post(
     }
   }
 );
-
-// --- DELETE produit (admin ou vendeur)
-router.delete(
-  "/:id",
-  authenticate,
-  requireRoles("admin", "vendeur"),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ message: "id invalide" });
-
-    try {
-      const product = await prisma.produit.findUnique({ where: { id } });
-      if (!product) return res.status(404).json({ message: "Produit introuvable" });
-
-      if (req.user!.role === "vendeur" && product.vendeurId !== req.user!.id) {
-        return res.status(403).json({ message: "Accès interdit" });
-      }
-
-      await prisma.produit.delete({ where: { id } });
-      res.status(204).send();
-    } catch (err: any) {
-      if (err.code === "P2025") {
-        return res.status(404).json({ message: "Produit introuvable" });
-      }
-      console.error(err);
-      res.status(500).json({ message: "Erreur serveur lors de la suppression" });
-    }
-  }
-);
-
-export default router;
