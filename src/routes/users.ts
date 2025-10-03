@@ -18,7 +18,10 @@ router.get('/:id/products', authenticate, requireRoles('admin', 'client'), async
   if (Number.isNaN(id)) return res.status(400).json({ message: 'id invalide' });
   const produits = await prisma.produit.findMany({
     where: { vendeurId: id },
-    include: { productImages: true }
+    include: {
+      productImages: true,
+      vendeur: { select: { id: true, email: true, telephone: true } }
+    }
   });
   res.json(produits);
 });

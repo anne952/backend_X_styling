@@ -93,7 +93,7 @@ model Produit {
   productImages  ProductImage[]
   enPromotion    Boolean         @default(false)
   prixPromotion  Decimal?        @db.Decimal(10, 2)
-   video          String?
+  video          String?
 }
 
 model ProductImage {
