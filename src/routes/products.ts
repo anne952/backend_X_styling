@@ -110,7 +110,9 @@ router.post(
           couleurs: { create: [{ couleurId }] },
         },
       });
-
+      
+// --- Console log pour vérifier la création
+console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${vendeurId}`);
       // --- Créer les images du produit
       const productImages = images.map((url: string) => ({
         url,
