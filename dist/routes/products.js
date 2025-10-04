@@ -8,6 +8,46 @@ const client_1 = require("@prisma/client");
 const prisma_1 = __importDefault(require("../prisma"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
+// Nouvelle route : infos vendeur pour un produit spécifique
+router.get("/:id/vendeur", async (req, res) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id))
+        return res.status(400).json({ message: "id invalide" });
+    const produit = await prisma_1.default.produit.findUnique({
+        where: { id },
+        include: {
+            vendeur: { select: { id: true, email: true, telephone: true } }
+        }
+    });
+    if (!produit)
+        return res.status(404).json({ message: "Produit introuvable" });
+    res.json({
+        produitId: produit.id,
+        vendeur: produit.vendeur ? {
+            id: produit.vendeur.id,
+            email: produit.vendeur.email,
+            telephone: produit.vendeur.telephone
+        } : null
+    });
+});
+// Nouvelle route : infos vendeur pour chaque produit publié
+router.get("/vendeur", async (req, res) => {
+    const produits = await prisma_1.default.produit.findMany({
+        include: {
+            vendeur: { select: { id: true, email: true, telephone: true } }
+        }
+    });
+    // On retourne uniquement les infos vendeur pour chaque produit
+    const result = produits.map(p => ({
+        produitId: p.id,
+        vendeur: p.vendeur ? {
+            id: p.vendeur.id,
+            email: p.vendeur.email,
+            telephone: p.vendeur.telephone
+        } : null
+    }));
+    res.json(result);
+});
 // --- GET produits (publique, avec pagination)
 router.get("/", async (req, res) => {
     const skip = Number(req.query.skip) || 0;
@@ -15,17 +55,25 @@ router.get("/", async (req, res) => {
     const produits = await prisma_1.default.produit.findMany({
         skip,
         take,
-        include: { categorie: true, productImages: true, couleurs: { include: { couleur: true } } },
+        include: {
+            categorie: true,
+            productImages: true,
+            couleurs: { include: { couleur: true } },
+            tailles: true,
+            vendeur: { select: { id: true, email: true, telephone: true } }
+        },
         orderBy: { id: "desc" },
     });
     res.json(produits);
 });
+// --- POST produit (admin ou vendeur)
 // --- POST produit (admin ou vendeur)
 router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur"), async (req, res) => {
     try {
         const { nom, description, prix, taille, video, images, } = req.body;
         const categorieId = Number(req.body.categorieId);
         const couleurId = Number(req.body.couleurId);
+        const tailles = req.body.tailles;
         // --- Validation categorie
         if (!categorieId || Number.isNaN(categorieId)) {
             return res.status(400).json({ message: "categorieId invalide" });
@@ -41,6 +89,10 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
         const color = await prisma_1.default.couleur.findUnique({ where: { id: couleurId } });
         if (!color) {
             return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
+        }
+        // --- Validation tailles
+        if (!tailles || !Array.isArray(tailles) || tailles.length === 0) {
+            return res.status(400).json({ message: "Au moins une taille est requise" });
         }
         // --- Déterminer le vendeurId
         let vendeurId;
@@ -78,47 +130,32 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
                 vendeurId,
                 video,
                 couleurs: { create: [{ couleurId }] },
+                tailles: { create: tailles.map(t => ({ taille: t })) },
             },
         });
+        // --- Console log pour vérifier la création
+        console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${vendeurId}`);
         // --- Créer les images du produit
         const productImages = images.map((url) => ({
             url,
             productId: created.id,
         }));
         await prisma_1.default.productImage.createMany({ data: productImages });
-        // --- Retourner le produit complet
+        // --- Retourner le produit complet AVEC vendeur
         const productWithRelations = await prisma_1.default.produit.findUnique({
             where: { id: created.id },
-            include: { categorie: true, productImages: true, couleurs: { include: { couleur: true } } },
+            include: {
+                categorie: true,
+                productImages: true,
+                couleurs: { include: { couleur: true } },
+                vendeur: { select: { id: true, email: true, telephone: true } },
+            },
         });
         res.status(201).json(productWithRelations);
     }
     catch (err) {
         console.error(err);
         res.status(500).json({ message: "Erreur serveur lors de la création du produit" });
-    }
-});
-// --- DELETE produit (admin ou vendeur)
-router.delete("/:id", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur"), async (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id))
-        return res.status(400).json({ message: "id invalide" });
-    try {
-        const product = await prisma_1.default.produit.findUnique({ where: { id } });
-        if (!product)
-            return res.status(404).json({ message: "Produit introuvable" });
-        if (req.user.role === "vendeur" && product.vendeurId !== req.user.id) {
-            return res.status(403).json({ message: "Accès interdit" });
-        }
-        await prisma_1.default.produit.delete({ where: { id } });
-        res.status(204).send();
-    }
-    catch (err) {
-        if (err.code === "P2025") {
-            return res.status(404).json({ message: "Produit introuvable" });
-        }
-        console.error(err);
-        res.status(500).json({ message: "Erreur serveur lors de la suppression" });
     }
 });
 exports.default = router;

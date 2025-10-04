@@ -13,17 +13,20 @@ const router = (0, express_1.Router)();
 router.post('/admin/bootstrap-test', (_req, res) => {
     res.json({ ok: true });
 });
-router.get('/:id/products', auth_1.authenticate, (0, auth_1.requireRoles)('admin'), async (req, res) => {
+router.get('/:id/products', auth_1.authenticate, (0, auth_1.requireRoles)('admin', 'client'), async (req, res) => {
     const id = Number(req.params.id);
     if (Number.isNaN(id))
         return res.status(400).json({ message: 'id invalide' });
     const produits = await prisma_1.default.produit.findMany({
         where: { vendeurId: id },
-        include: { productImages: true }
+        include: {
+            productImages: true,
+            vendeur: { select: { id: true, email: true, telephone: true } }
+        }
     });
     res.json(produits);
 });
-router.get('/:id', auth_1.authenticate, (0, auth_1.requireRoles)('admin'), async (req, res) => {
+router.get('/:id', auth_1.authenticate, (0, auth_1.requireRoles)('admin', 'client'), async (req, res) => {
     const id = Number(req.params.id);
     if (Number.isNaN(id))
         return res.status(400).json({ message: 'id invalide' });
@@ -149,19 +152,23 @@ router.put('/me', auth_1.authenticate, async (req, res) => {
         }
         // Hasher le mot de passe si fourni
         const hashedPassword = password ? await bcrypt_1.default.hash(password, 10) : undefined;
-        const updateData = { nom, email, ...(hashedPassword && { password: hashedPassword }) };
-        if (photoProfil !== undefined)
-            updateData.photoProfil = photoProfil;
+        const data = {};
+        if (nom)
+            data.nom = nom;
+        if (email)
+            data.email = email;
+        if (photoProfil)
+            data.photoProfil = photoProfil;
+        if (hashedPassword)
+            data.password = hashedPassword;
         const updated = await prisma_1.default.users.update({
-            where: { id: userId },
-            data: updateData,
-            select: { id: true, email: true, nom: true, role: true, photoProfil: true }
+            where: { id: req.user.id },
+            data
         });
-        res.json(updated);
+        res.json({ message: 'Profil mis à jour avec succès', user: updated });
     }
     catch (error) {
-        console.error('Erreur lors de la mise à jour du profil:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du profil.' });
     }
 });
 // Enregistrer le token push Expo pour l'utilisateur courant

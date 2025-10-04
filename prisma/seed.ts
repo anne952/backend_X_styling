@@ -23,6 +23,45 @@ async function main() {
     ],
     skipDuplicates: true
   });
+
+  // Ajout de catégories
+  await prisma.categorie.createMany({
+    data: [
+      { type: 'Homme' },
+      { type: 'Femme' },
+      { type: 'Enfant' }
+    ],
+    skipDuplicates: true
+  });
+
+  // Création d'un vendeur exemple
+  const vendeurPassword = await bcrypt.hash('vendeur123', 10);
+  const vendeur = await prisma.users.upsert({
+    where: { email: 'vendeur@example.com' },
+    update: { password: vendeurPassword, role: 'vendeur', nom: 'Vendeur Exemple', telephone: '+1234567890' },
+    create: { nom: 'Vendeur Exemple', email: 'vendeur@example.com', password: vendeurPassword, role: 'vendeur', telephone: '+1234567890', typeCouture: ['HOMME', 'FEMME'], specialite: ['PretAPorter'] }
+  });
+
+  // Création d'un produit exemple
+  const categorie = await prisma.categorie.findFirst({ where: { type: 'Homme' } });
+  const couleur = await prisma.couleur.findFirst({ where: { nom: 'Noir' } });
+  if (categorie && couleur) {
+    await prisma.produit.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        nom: 'Chemise noire',
+        description: 'Une belle chemise noire pour homme',
+        prix: 25.00,
+        taille: 'M',
+        categorieId: categorie.id,
+        vendeurId: vendeur.id,
+        couleurs: { create: [{ couleurId: couleur.id }] },
+        tailles: { create: [{ taille: 'M' }, { taille: 'L' }, { taille: 'XL' }] },
+        productImages: { create: [{ url: 'https://example.com/image1.jpg' }] }
+      }
+    });
+  }
 }
 
 main()

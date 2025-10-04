@@ -9,27 +9,27 @@ const prisma_1 = __importDefault(require("../prisma"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 const reviewSchema = zod_1.z.object({
-    vendeurId: zod_1.z.number().int().positive(),
+    productId: zod_1.z.number().int().positive(),
     rating: zod_1.z.number().int().min(1).max(5),
     comment: zod_1.z.string().trim().min(1, 'Le commentaire est requis')
 });
-// Créer une review (cible: vendeur)
+// Créer une review (cible: produit)
 router.post('/', auth_1.authenticate, async (req, res) => {
     try {
         const parsed = reviewSchema.safeParse(req.body);
         if (!parsed.success) {
             return res.status(400).json({ message: 'Données invalides', errors: parsed.error.format() });
         }
-        const { vendeurId, rating, comment } = parsed.data;
+        const { productId, rating, comment } = parsed.data;
         const userId = req.user.id;
-        // Vérifier que le vendeur existe et a le rôle vendeur
-        const vendeur = await prisma_1.default.users.findUnique({ where: { id: vendeurId } });
-        if (!vendeur || vendeur.role !== 'vendeur') {
-            return res.status(404).json({ message: 'Vendeur non trouvé' });
+        // Vérifier que le produit existe
+        const product = await prisma_1.default.produit.findUnique({ where: { id: productId } });
+        if (!product) {
+            return res.status(404).json({ message: 'Produit non trouvé' });
         }
         const review = await prisma_1.default.review.create({
             data: {
-                vendeurId,
+                productId,
                 userId,
                 rating,
                 comment
@@ -38,7 +38,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
                 user: {
                     select: { id: true, nom: true, email: true }
                 },
-                vendeur: {
+                product: {
                     select: { id: true, nom: true }
                 }
             }
@@ -50,17 +50,23 @@ router.post('/', auth_1.authenticate, async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur' });
     }
 });
-// Obtenir toutes les reviews d'un vendeur (public)
-router.get('/vendor/:vendeurId', async (req, res) => {
+// Obtenir toutes les reviews d'un produit (public)
+router.get('/product/:productId', async (req, res) => {
     try {
-        const vendeurId = parseInt(req.params.vendeurId);
-        if (isNaN(vendeurId)) {
-            return res.status(400).json({ message: 'ID vendeur invalide' });
+        const productId = parseInt(req.params.productId);
+        if (isNaN(productId)) {
+            return res.status(400).json({ message: 'ID produit invalide' });
         }
         const reviews = await prisma_1.default.review.findMany({
-            where: { vendeurId },
+            where: { productId },
             include: {
                 user: {
+                    select: {
+                        id: true,
+                        nom: true
+                    }
+                },
+                product: {
                     select: {
                         id: true,
                         nom: true
@@ -79,7 +85,7 @@ router.get('/vendor/:vendeurId', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des reviews vendeur:', error);
+        console.error('Erreur lors de la récupération des reviews produit:', error);
         res.status(500).json({ message: 'Erreur serveur' });
     }
 });
@@ -94,7 +100,7 @@ router.get('/user/:userId', auth_1.authenticate, async (req, res) => {
         const reviews = await prisma_1.default.review.findMany({
             where: { userId },
             include: {
-                vendeur: {
+                product: {
                     select: {
                         id: true,
                         nom: true
@@ -131,7 +137,7 @@ router.put('/:reviewId', auth_1.authenticate, async (req, res) => {
             data: parsed.data,
             include: {
                 user: { select: { id: true, nom: true, email: true } },
-                vendeur: { select: { id: true, nom: true } }
+                product: { select: { id: true, nom: true } }
             }
         });
         res.json(updatedReview);
@@ -171,7 +177,7 @@ router.get('/', auth_1.authenticate, (0, auth_1.requireRoles)('admin'), async (_
         const reviews = await prisma_1.default.review.findMany({
             include: {
                 user: { select: { id: true, nom: true, email: true } },
-                vendeur: { select: { id: true, nom: true } }
+                product: { select: { id: true, nom: true } }
             },
             orderBy: { createdAt: 'desc' }
         });

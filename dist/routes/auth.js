@@ -11,8 +11,8 @@ const prisma_1 = __importDefault(require("../prisma"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 const authSchema = zod_1.z.union([
-    zod_1.z.object({ email: zod_1.z.string().email(), password: zod_1.z.string().min(6) }),
-    zod_1.z.object({ nom: zod_1.z.string().min(2), password: zod_1.z.string().min(6) })
+    zod_1.z.object({ email: zod_1.z.string().email(), password: zod_1.z.string().min(6), app: zod_1.z.enum(['vendeur', 'client', 'admin']).optional().default('client') }),
+    zod_1.z.object({ nom: zod_1.z.string().min(2), password: zod_1.z.string().min(6), app: zod_1.z.enum(['vendeur', 'client', 'admin']).optional().default('client') })
 ]);
 // Enums côté API pour rester aligné avec Prisma
 const typeCoutureEnum = zod_1.z.enum(['HOMME', 'FEMME', 'ENFANT', 'MIXTE']);
@@ -116,14 +116,13 @@ router.post('/register', async (req, res) => {
         }
         const hashed = await bcrypt_1.default.hash(password, 10);
         const secret = process.env.JWT_SECRET || 'dev-secret';
-        const token = jsonwebtoken_1.default.sign({ email }, secret, { expiresIn: '7d' });
-        const user = await prisma_1.default.users.create({
+        // Crée l'utilisateur sans token
+        const created = await prisma_1.default.users.create({
             data: {
                 email,
                 password: hashed,
                 nom,
                 role,
-                token,
                 photoProfil,
                 localisation,
                 telephone,
@@ -136,7 +135,6 @@ router.post('/register', async (req, res) => {
                 email: true,
                 nom: true,
                 role: true,
-                token: true,
                 photoProfil: true,
                 localisation: true,
                 telephone: true,
@@ -145,21 +143,24 @@ router.post('/register', async (req, res) => {
                 specialite: true
             }
         });
+        // Génère le token avec id et rôle
+        const token = jsonwebtoken_1.default.sign({ id: created.id, role: created.role }, secret, { expiresIn: '7d' });
+        await prisma_1.default.users.update({ where: { id: created.id }, data: { token } });
         return res.status(201).json({
             message: 'Utilisateur créé avec succès',
             user: {
-                id: user.id,
-                email: user.email,
-                nom: user.nom,
-                role: user.role,
-                photoProfil: user.photoProfil,
-                localisation: user.localisation,
-                telephone: user.telephone,
-                typeCouture: user.typeCouture,
-                commentaire: user.commentaire,
-                specialite: user.specialite
+                id: created.id,
+                email: created.email,
+                nom: created.nom,
+                role: created.role,
+                photoProfil: created.photoProfil,
+                localisation: created.localisation,
+                telephone: created.telephone,
+                typeCouture: created.typeCouture,
+                commentaire: created.commentaire,
+                specialite: created.specialite
             },
-            token: user.token
+            token
         });
     }
     catch (error) {
@@ -181,6 +182,11 @@ router.post('/login', async (req, res) => {
         const ok = await bcrypt_1.default.compare(data.password, user.password);
         if (!ok) {
             return res.status(401).json({ message: 'Identifiants invalides' });
+        }
+        // Validation du rôle selon l'application
+        const app = data.app;
+        if ((app === 'vendeur' && user.role !== 'vendeur') || (app === 'client' && user.role !== 'client') || (app === 'admin' && user.role !== 'admin')) {
+            return res.status(403).json({ message: `Accès refusé : cette application est réservée aux ${app}s.` });
         }
         // Générer un nouveau token
         const secret = process.env.JWT_SECRET || 'dev-secret';
