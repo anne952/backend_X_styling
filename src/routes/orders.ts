@@ -59,8 +59,15 @@ router.post('/', authenticate, requireRoles('client', 'vendeur'), async (req, re
           }
         }
       },
-      include: { ligneCommande: true, payement: true }
+      include: { ligneCommande: true, payement: true, users: true }
     });
+
+    // Envoyer notification push au client
+    if (order.users.expoPushToken) {
+      await sendExpoNotificationsAsync([
+        buildMessage(order.users.expoPushToken, 'Commande reçue', `Votre commande #${order.id} a été enregistrée avec succès et sera traitée bientôt.`)
+      ]);
+    }
 
     return res.status(201).json({ message: '✅ Commande créée avec succès.', order });
 

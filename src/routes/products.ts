@@ -58,6 +58,7 @@ router.get("/", async (req, res) => {
       categorie: true,
       productImages: true,
       couleurs: { include: { couleur: true } },
+      tailles: true,
       vendeur: { select: { id: true, email: true, telephone: true } }
     },
     orderBy: { id: "desc" },
@@ -92,6 +93,7 @@ router.post(
 
       const categorieId = Number((req.body as any).categorieId);
       const couleurId = Number((req.body as any).couleurId);
+      const tailles: ("L" | "S" | "M" | "XL" | "XXL" | "XXXL")[] = (req.body as any).tailles;
 
       // --- Validation categorie
       if (!categorieId || Number.isNaN(categorieId)) {
@@ -109,6 +111,11 @@ router.post(
       const color = await prisma.couleur.findUnique({ where: { id: couleurId } });
       if (!color) {
         return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
+      }
+
+      // --- Validation tailles
+      if (!tailles || !Array.isArray(tailles) || tailles.length === 0) {
+        return res.status(400).json({ message: "Au moins une taille est requise" });
       }
 
       // --- Déterminer le vendeurId
@@ -148,6 +155,7 @@ router.post(
           vendeurId,
           video,
           couleurs: { create: [{ couleurId }] },
+          tailles: { create: tailles.map(t => ({ taille: t })) },
         },
       });
       

@@ -28,17 +28,16 @@ model Users {
   likes            Like[]
   cartItems        CartItem[]
   authoredReviews  Review[]    @relation("AuteurReviews")
-  vendeurReviews   Review[]    @relation("VendeurReviews")
 }
 
 model Review {
   id         Int      @id @default(autoincrement())
-  vendeurId  Int
+  productId  Int
   userId     Int
   rating     Int      @db.SmallInt
   comment    String?
   createdAt  DateTime @default(now())
-  vendeur    Users    @relation("VendeurReviews", fields: [vendeurId], references: [id], onDelete: Cascade)
+  product    Produit  @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
   user       Users    @relation("AuteurReviews", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
@@ -85,12 +84,14 @@ model Produit {
   categorieId    Int
   categorie      Categorie       @relation(fields: [categorieId], references: [id], onDelete: Cascade)
   couleurs       CouleurOnProduit[]
+  tailles        TailleOnProduit[]
   ligneCommande  LigneCommande[]
   vendeurId      Int?
   vendeur        Users?          @relation(fields: [vendeurId], references: [id], onDelete: Cascade)
   likes          Like[]
   cartItems      CartItem[]
   productImages  ProductImage[]
+  reviews        Review[]        @relation("ProductReviews")
   enPromotion    Boolean         @default(false)
   prixPromotion  Decimal?        @db.Decimal(10, 2)
   video          String?
@@ -125,6 +126,13 @@ model CouleurOnProduit {
   couleur   Couleur  @relation(fields: [couleurId], references: [id], onDelete: Cascade)
   couleurId Int
   @@id([produitId, couleurId])
+}
+
+model TailleOnProduit {
+  produit   Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  produitId Int
+  taille    Taille
+  @@id([produitId, taille])
 }
 
 model Like {

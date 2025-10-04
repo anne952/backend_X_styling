@@ -8,8 +8,8 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 
 const authSchema = z.union([
-  z.object({ email: z.string().email(), password: z.string().min(6) }),
-  z.object({ nom: z.string().min(2), password: z.string().min(6) })
+  z.object({ email: z.string().email(), password: z.string().min(6), app: z.enum(['vendeur', 'client', 'admin']).optional().default('client') }),
+  z.object({ nom: z.string().min(2), password: z.string().min(6), app: z.enum(['vendeur', 'client', 'admin']).optional().default('client') })
 ]);
 
 // Enums côté API pour rester aligné avec Prisma
@@ -181,7 +181,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Données invalides', errors: parsed.error.format() });
     }
 
-    const data = parsed.data as { email?: string; nom?: string; password: string };
+    const data = parsed.data as { email?: string; nom?: string; password: string; app: string };
 
     const user = await prisma.users.findFirst({ where: data.email ? { email: data.email } : { nom: data.nom! } });
     if (!user) {
@@ -191,6 +191,12 @@ router.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(data.password, user.password);
     if (!ok) {
       return res.status(401).json({ message: 'Identifiants invalides' });
+    }
+
+    // Validation du rôle selon l'application
+    const app = data.app;
+    if ((app === 'vendeur' && user.role !== 'vendeur') || (app === 'client' && user.role !== 'client') || (app === 'admin' && user.role !== 'admin')) {
+      return res.status(403).json({ message: `Accès refusé : cette application est réservée aux ${app}s.` });
     }
 
     // Générer un nouveau token
