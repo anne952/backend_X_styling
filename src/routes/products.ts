@@ -1,3 +1,11 @@
+import { Router } from "express";
+import { Prisma } from "@prisma/client";  
+import prisma from "../prisma";          
+
+import { authenticate, requireRoles } from "../middleware/auth";
+
+const router = Router();
+
 // Nouvelle route : infos vendeur pour un produit spécifique
 router.get("/:id/vendeur", async (req, res) => {
   const id = Number(req.params.id);
@@ -18,14 +26,6 @@ router.get("/:id/vendeur", async (req, res) => {
     } : null
   });
 });
-
-import { Router } from "express";
-import { Prisma } from "@prisma/client";  
-import prisma from "../prisma";          
-
-import { authenticate, requireRoles } from "../middleware/auth";
-
-const router = Router();
 
 // Nouvelle route : infos vendeur pour chaque produit publié
 router.get("/vendeur", async (req, res) => {
