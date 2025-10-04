@@ -1,3 +1,24 @@
+// Nouvelle route : infos vendeur pour un produit spécifique
+router.get("/:id/vendeur", async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ message: "id invalide" });
+  const produit = await prisma.produit.findUnique({
+    where: { id },
+    include: {
+      vendeur: { select: { id: true, email: true, telephone: true } }
+    }
+  });
+  if (!produit) return res.status(404).json({ message: "Produit introuvable" });
+  res.json({
+    produitId: produit.id,
+    vendeur: produit.vendeur ? {
+      id: produit.vendeur.id,
+      email: produit.vendeur.email,
+      telephone: produit.vendeur.telephone
+    } : null
+  });
+});
+
 import { Router } from "express";
 import { Prisma } from "@prisma/client";  
 import prisma from "../prisma";          
