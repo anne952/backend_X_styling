@@ -178,3 +178,5 @@ console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${
     }
   }
 );
+
+export default router;
