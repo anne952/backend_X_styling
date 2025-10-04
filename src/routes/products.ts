@@ -6,6 +6,25 @@ import { authenticate, requireRoles } from "../middleware/auth";
 
 const router = Router();
 
+// Nouvelle route : infos vendeur pour chaque produit publié
+router.get("/vendeur", async (req, res) => {
+  const produits = await prisma.produit.findMany({
+    include: {
+      vendeur: { select: { id: true, email: true, telephone: true } }
+    }
+  });
+  // On retourne uniquement les infos vendeur pour chaque produit
+  const result = produits.map(p => ({
+    produitId: p.id,
+    vendeur: p.vendeur ? {
+      id: p.vendeur.id,
+      email: p.vendeur.email,
+      telephone: p.vendeur.telephone
+    } : null
+  }));
+  res.json(result);
+});
+
 // --- GET produits (publique, avec pagination)
 router.get("/", async (req, res) => {
   const skip = Number(req.query.skip) || 0;
