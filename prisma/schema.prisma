@@ -1,6 +1,5 @@
- 
-  generator client {
-  provider = "prisma-client-js"
+generator client {
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -10,49 +9,49 @@ datasource db {
 }
 
 model Users {
-  id               Int         @id @default(autoincrement())
-  nom              String
-  email            String      @unique
-  password         String
-  role             Role
-  token            String?     @unique
-  expoPushToken    String?
-  telephone        String?
-  photoProfil      String?
-  typeCouture      TypeCouture[]
-  commentaire      String?
-  localisation     String?
-  specialite       Specialite[]
-  commande         Commande[]
-  produitsVendus   Produit[]
-  likes            Like[]
-  cartItems        CartItem[]
-  authoredReviews  Review[]    @relation("AuteurReviews")
+  id              Int           @id @default(autoincrement())
+  nom             String
+  email           String        @unique
+  password        String
+  role            Role
+  token           String?       @unique
+  telephone       String?
+  typeCouture     TypeCouture[]
+  commentaire     String?
+  localisation    String?
+  specialite      Specialite[]
+  photoProfil     String?
+  expoPushToken   String?
+  cartItems       CartItem[]
+  commande        Commande[]
+  likes           Like[]
+  produitsVendus  Produit[]
+  authoredReviews Review[]      @relation("AuteurReviews")
 }
 
 model Review {
-  id         Int      @id @default(autoincrement())
-  productId  Int
-  userId     Int
-  rating     Int      @db.SmallInt
-  comment    String?
-  createdAt  DateTime @default(now())
-  product    Produit  @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
-  user       Users    @relation("AuteurReviews", fields: [userId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  rating    Int      @db.SmallInt
+  comment   String?
+  createdAt DateTime @default(now())
+  productId Int
+  product   Produit  @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
+  user      Users    @relation("AuteurReviews", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
 
 model Commande {
-  id              Int             @id @default(autoincrement())
-  montant         Decimal         @db.Decimal(10, 2)
-  localisation    String?
-  date            DateTime        @default(now())
-  status          Status          @default(enAttente)
-  usersId         Int
-  users           Users           @relation(fields: [usersId], references: [id])
-  ligneCommande   LigneCommande[]
-  payement        Payement[]
+  id            Int             @id @default(autoincrement())
+  montant       Decimal         @db.Decimal(10, 2)
+  localisation  String?
+  date          DateTime        @default(now())
+  status        Status          @default(enAttente)
+  usersId       Int
+  users         Users           @relation(fields: [usersId], references: [id])
+  ligneCommande LigneCommande[]
+  payement      Payement?
 }
 
 model Payement {
@@ -70,90 +69,91 @@ model LigneCommande {
   total        Decimal  @db.Decimal(10, 2)
   date         DateTime @default(now())
   commandeId   Int
-  commande     Commande @relation(fields: [commandeId], references: [id])
   produitId    Int
+  commande     Commande @relation(fields: [commandeId], references: [id])
   produit      Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
 }
 
 model Produit {
-  id             Int             @id @default(autoincrement())
-  nom            String
-  description    String
-  prix           Decimal         @db.Decimal(10, 2)
-  taille         Taille
-  categorieId    Int
-  categorie      Categorie       @relation(fields: [categorieId], references: [id], onDelete: Cascade)
-  couleurs       CouleurOnProduit[]
-  tailles        TailleOnProduit[]
-  ligneCommande  LigneCommande[]
-  vendeurId      Int?
-  vendeur        Users?          @relation(fields: [vendeurId], references: [id], onDelete: Cascade)
-  likes          Like[]
-  cartItems      CartItem[]
-  productImages  ProductImage[]
-  reviews        Review[]        @relation("ProductReviews")
-  enPromotion    Boolean         @default(false)
-  prixPromotion  Decimal?        @db.Decimal(10, 2)
-  video          String?
+  id            Int                @id @default(autoincrement())
+  nom           String
+  description   String
+  prix          Decimal            @db.Decimal(10, 2)
+  taille        Taille
+  categorieId   Int
+  vendeurId     Int?
+  video         String?
+  enPromotion   Boolean            @default(false)
+  prixPromotion Decimal?           @db.Decimal(10, 2)
+  cartItems     CartItem[]
+  couleurs      CouleurOnProduit[]
+  ligneCommande LigneCommande[]
+  likes         Like[]
+  categorie     Categorie          @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+  vendeur       Users?             @relation(fields: [vendeurId], references: [id], onDelete: Cascade)
+  tailles       TailleOnProduit[]
+  productImages ProductImage[]
+  reviews       Review[]           @relation("ProductReviews")
 }
 
 model ProductImage {
-  id         Int     @id @default(autoincrement())
-  url        String
-  productId  Int
-  product    Produit @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        Int     @id @default(autoincrement())
+  url       String
+  productId Int
+  product   Produit @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_images")
 }
 
 model Categorie {
-  id        Int       @id @default(autoincrement())
-  type      TypeCategorie
-  produits  Produit[]
+  id       Int           @id @default(autoincrement())
+  type     TypeCategorie
+  produits Produit[]
 }
 
 model Couleur {
-  id        Int      @id @default(autoincrement())
-  nom       String   @unique
-  hex       String?
-  produits  CouleurOnProduit[]
-
+  id       Int                @id @default(autoincrement())
+  nom      String             @unique
+  hex      String?
+  produits CouleurOnProduit[]
 }
 
 model CouleurOnProduit {
-  produit   Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
   produitId Int
-  couleur   Couleur  @relation(fields: [couleurId], references: [id], onDelete: Cascade)
   couleurId Int
+  couleur   Couleur @relation(fields: [couleurId], references: [id], onDelete: Cascade)
+  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
   @@id([produitId, couleurId])
 }
 
 model TailleOnProduit {
-  produit   Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
   produitId Int
   taille    Taille
+  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
   @@id([produitId, taille])
 }
 
 model Like {
-  id         Int      @id @default(autoincrement())
-  usersId    Int
-  produitId  Int
-  createdAt  DateTime @default(now())
-  users      Users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  produit    Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  usersId   Int
+  produitId Int
+  createdAt DateTime @default(now())
+  produit   Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  users     Users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
 
   @@unique([usersId, produitId])
 }
 
 model CartItem {
-  id         Int      @id @default(autoincrement())
-  usersId    Int
-  produitId  Int
-  quantite   Int      @default(1)
-  createdAt  DateTime @default(now())
-  users      Users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  produit    Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  usersId   Int
+  produitId Int
+  quantite  Int      @default(1)
+  createdAt DateTime @default(now())
+  produit   Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  users     Users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
 
   @@unique([usersId, produitId])
 }
