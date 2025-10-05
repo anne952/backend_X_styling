@@ -13,7 +13,7 @@ router.get("/:id/vendeur", async (req, res) => {
   const produit = await prisma.produit.findUnique({
     where: { id },
     include: {
-      vendeur: { select: { id: true, email: true, telephone: true } }
+      vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
     }
   });
   if (!produit) return res.status(404).json({ message: "Produit introuvable" });
@@ -22,7 +22,11 @@ router.get("/:id/vendeur", async (req, res) => {
     vendeur: produit.vendeur ? {
       id: produit.vendeur.id,
       email: produit.vendeur.email,
-      telephone: produit.vendeur.telephone
+      telephone: produit.vendeur.telephone,
+      photoProfil: produit.vendeur.photoProfil,
+      localisation: produit.vendeur.localisation,
+      commentaire: produit.vendeur.commentaire,
+      specialite: produit.vendeur.specialite
     } : null
   });
 });
@@ -31,7 +35,7 @@ router.get("/:id/vendeur", async (req, res) => {
 router.get("/vendeur", async (req, res) => {
   const produits = await prisma.produit.findMany({
     include: {
-      vendeur: { select: { id: true, email: true, telephone: true } }
+      vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
     }
   });
   // On retourne uniquement les infos vendeur pour chaque produit
@@ -40,7 +44,11 @@ router.get("/vendeur", async (req, res) => {
     vendeur: p.vendeur ? {
       id: p.vendeur.id,
       email: p.vendeur.email,
-      telephone: p.vendeur.telephone
+      telephone: p.vendeur.telephone,
+      photoProfil: p.vendeur.photoProfil,
+      localisation: p.vendeur.localisation,
+      commentaire: p.vendeur.commentaire,
+      specialite: p.vendeur.specialite
     } : null
   }));
   res.json(result);
@@ -59,7 +67,7 @@ router.get("/", async (req, res) => {
       productImages: true,
       couleurs: { include: { couleur: true } },
       tailles: true,
-      vendeur: { select: { id: true, email: true, telephone: true } }
+      vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
     },
     orderBy: { id: "desc" },
   });

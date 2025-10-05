@@ -21,7 +21,7 @@ router.get('/:id/products', auth_1.authenticate, (0, auth_1.requireRoles)('admin
         where: { vendeurId: id },
         include: {
             productImages: true,
-            vendeur: { select: { id: true, email: true, telephone: true } }
+            vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
         }
     });
     res.json(produits);
