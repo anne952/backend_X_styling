@@ -169,10 +169,21 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
                 categorie: true,
                 productImages: true,
                 couleurs: { include: { couleur: true } },
-                vendeur: { select: { id: true, email: true, telephone: true } },
+                tailles: true,
+                vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } },
             },
         });
-        res.status(201).json(productWithRelations);
+        const taillesList = (productWithRelations?.tailles || []).map(t => t.taille);
+        const couleursList = (productWithRelations?.couleurs || []).map(c => ({
+            id: c.couleur.id,
+            nom: c.couleur.nom,
+            hex: c.couleur.hex
+        }));
+        res.status(201).json({
+            ...productWithRelations,
+            taillesList,
+            couleursList
+        });
     }
     catch (err) {
         console.error(err);
