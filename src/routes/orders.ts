@@ -113,7 +113,7 @@ router.post('/:id/validate', authenticate, requireRoles('admin', 'vendeur'), asy
 /**
  * 📌 Mes commandes (client)
  */
-router.get('/me', authenticate, requireRoles('client'), async (req, res) => {
+router.get('/me', authenticate, requireRoles('client', 'vendeur'), async (req, res) => {
   const orders = await prisma.commande.findMany({
     where: { usersId: req.user!.id },
     include: { ligneCommande: true, payement: true }
