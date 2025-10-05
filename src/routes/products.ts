@@ -187,4 +187,54 @@ console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${
   }
 );
 
+// --- DELETE produit (admin ou vendeur propriétaire)
+router.delete(
+  "/:id",
+  authenticate,
+  requireRoles("admin", "vendeur"),
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "ID produit invalide" });
+      }
+
+      // Vérifier que le produit existe
+      const existingProduct = await prisma.produit.findUnique({
+        where: { id },
+        include: { vendeur: { select: { id: true } } }
+      });
+
+      if (!existingProduct) {
+        return res.status(404).json({ message: "Produit introuvable" });
+      }
+
+      // Vérification de propriété pour les vendeurs
+      if (req.user!.role === "vendeur") {
+        if (!existingProduct.vendeur || existingProduct.vendeur.id !== req.user!.id) {
+          return res.status(403).json({ 
+            message: "Accès refusé : vous ne pouvez supprimer que vos propres produits" 
+          });
+        }
+      }
+
+      // Supprimer le produit (cascade automatique pour les relations)
+      await prisma.produit.delete({
+        where: { id }
+      });
+
+      return res.json({ 
+        message: "✅ Produit supprimé avec succès",
+        deletedProductId: id 
+      });
+
+    } catch (error) {
+      console.error("❌ Erreur lors de la suppression du produit:", error);
+      return res.status(500).json({ 
+        message: "Erreur serveur lors de la suppression du produit" 
+      });
+    }
+  }
+);
+
 export default router;

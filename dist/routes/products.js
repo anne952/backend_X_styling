@@ -158,4 +158,43 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
         res.status(500).json({ message: "Erreur serveur lors de la création du produit" });
     }
 });
+// --- DELETE produit (admin ou vendeur propriétaire)
+router.delete("/:id", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur"), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({ message: "ID produit invalide" });
+        }
+        // Vérifier que le produit existe
+        const existingProduct = await prisma_1.default.produit.findUnique({
+            where: { id },
+            include: { vendeur: { select: { id: true } } }
+        });
+        if (!existingProduct) {
+            return res.status(404).json({ message: "Produit introuvable" });
+        }
+        // Vérification de propriété pour les vendeurs
+        if (req.user.role === "vendeur") {
+            if (!existingProduct.vendeur || existingProduct.vendeur.id !== req.user.id) {
+                return res.status(403).json({
+                    message: "Accès refusé : vous ne pouvez supprimer que vos propres produits"
+                });
+            }
+        }
+        // Supprimer le produit (cascade automatique pour les relations)
+        await prisma_1.default.produit.delete({
+            where: { id }
+        });
+        return res.json({
+            message: "✅ Produit supprimé avec succès",
+            deletedProductId: id
+        });
+    }
+    catch (error) {
+        console.error("❌ Erreur lors de la suppression du produit:", error);
+        return res.status(500).json({
+            message: "Erreur serveur lors de la suppression du produit"
+        });
+    }
+});
 exports.default = router;
