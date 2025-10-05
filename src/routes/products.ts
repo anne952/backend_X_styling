@@ -100,7 +100,15 @@ router.post(
       };
 
       const categorieId = Number((req.body as any).categorieId);
-      const couleurId = Number((req.body as any).couleurId);
+      // Supporte soit un id unique (couleurId), soit un tableau (couleurIds)
+      const rawCouleurId = (req.body as any).couleurId;
+      const rawCouleurIds = (req.body as any).couleurIds;
+      const couleurIdsInput: unknown = rawCouleurIds ?? rawCouleurId;
+      const couleurIds: number[] = Array.isArray(couleurIdsInput)
+        ? (couleurIdsInput as any[]).map((v) => Number(v))
+        : (couleurIdsInput !== undefined && couleurIdsInput !== null)
+          ? [Number(couleurIdsInput)]
+          : [];
       const tailles: ("L" | "S" | "M" | "XL" | "XXL" | "XXXL")[] = (req.body as any).tailles;
 
       // --- Validation categorie
@@ -112,13 +120,18 @@ router.post(
         return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
       }
 
-      // --- Validation couleur
-      if (!couleurId || Number.isNaN(couleurId)) {
-        return res.status(400).json({ message: "couleurId invalide" });
+      // --- Validation couleurs (multi)
+      if (!couleurIds || !Array.isArray(couleurIds) || couleurIds.length === 0) {
+        return res.status(400).json({ message: "Au moins une couleur est requise (utiliser couleurIds)" });
       }
-      const color = await prisma.couleur.findUnique({ where: { id: couleurId } });
-      if (!color) {
-        return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
+      if (couleurIds.some((id) => Number.isNaN(id) || id <= 0)) {
+        return res.status(400).json({ message: "couleurIds doit contenir des identifiants valides" });
+      }
+      const existingColors = await prisma.couleur.findMany({ where: { id: { in: couleurIds } }, select: { id: true } });
+      if (existingColors.length !== couleurIds.length) {
+        const foundIds = new Set(existingColors.map(c => c.id));
+        const missing = couleurIds.filter(id => !foundIds.has(id));
+        return res.status(400).json({ message: `Couleur(s) introuvable(s): ${missing.join(', ')}` });
       }
 
       // --- Validation tailles
@@ -162,7 +175,7 @@ router.post(
           categorieId,
           vendeurId,
           video,
-          couleurs: { create: [{ couleurId }] },
+          couleurs: { create: couleurIds.map((cid) => ({ couleurId: cid })) },
           tailles: { create: tailles.map(t => ({ taille: t })) },
         },
       });

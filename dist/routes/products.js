@@ -80,7 +80,15 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
     try {
         const { nom, description, prix, taille, video, images, } = req.body;
         const categorieId = Number(req.body.categorieId);
-        const couleurId = Number(req.body.couleurId);
+        // Supporte soit un id unique (couleurId), soit un tableau (couleurIds)
+        const rawCouleurId = req.body.couleurId;
+        const rawCouleurIds = req.body.couleurIds;
+        const couleurIdsInput = rawCouleurIds ?? rawCouleurId;
+        const couleurIds = Array.isArray(couleurIdsInput)
+            ? couleurIdsInput.map((v) => Number(v))
+            : (couleurIdsInput !== undefined && couleurIdsInput !== null)
+                ? [Number(couleurIdsInput)]
+                : [];
         const tailles = req.body.tailles;
         // --- Validation categorie
         if (!categorieId || Number.isNaN(categorieId)) {
@@ -90,13 +98,18 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
         if (!cat) {
             return res.status(400).json({ message: `Categorie introuvable: ${categorieId}` });
         }
-        // --- Validation couleur
-        if (!couleurId || Number.isNaN(couleurId)) {
-            return res.status(400).json({ message: "couleurId invalide" });
+        // --- Validation couleurs (multi)
+        if (!couleurIds || !Array.isArray(couleurIds) || couleurIds.length === 0) {
+            return res.status(400).json({ message: "Au moins une couleur est requise (utiliser couleurIds)" });
         }
-        const color = await prisma_1.default.couleur.findUnique({ where: { id: couleurId } });
-        if (!color) {
-            return res.status(400).json({ message: `Couleur introuvable: ${couleurId}` });
+        if (couleurIds.some((id) => Number.isNaN(id) || id <= 0)) {
+            return res.status(400).json({ message: "couleurIds doit contenir des identifiants valides" });
+        }
+        const existingColors = await prisma_1.default.couleur.findMany({ where: { id: { in: couleurIds } }, select: { id: true } });
+        if (existingColors.length !== couleurIds.length) {
+            const foundIds = new Set(existingColors.map(c => c.id));
+            const missing = couleurIds.filter(id => !foundIds.has(id));
+            return res.status(400).json({ message: `Couleur(s) introuvable(s): ${missing.join(', ')}` });
         }
         // --- Validation tailles
         if (!tailles || !Array.isArray(tailles) || tailles.length === 0) {
@@ -137,7 +150,7 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
                 categorieId,
                 vendeurId,
                 video,
-                couleurs: { create: [{ couleurId }] },
+                couleurs: { create: couleurIds.map((cid) => ({ couleurId: cid })) },
                 tailles: { create: tailles.map(t => ({ taille: t })) },
             },
         });
