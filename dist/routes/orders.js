@@ -74,7 +74,29 @@ router.get('/mine', auth_1.authenticate, (0, auth_1.requireRoles)('vendeur'), as
     const produitIds = produits.map(p => p.id);
     const commandes = await prisma_1.default.commande.findMany({
         where: { ligneCommande: { some: { produitId: { in: produitIds } } } },
-        include: { ligneCommande: true }
+        include: {
+            ligneCommande: {
+                where: { produitId: { in: produitIds } },
+                include: {
+                    produit: {
+                        include: {
+                            productImages: true,
+                            categorie: true
+                        }
+                    }
+                }
+            },
+            users: {
+                select: {
+                    id: true,
+                    nom: true,
+                    email: true,
+                    telephone: true,
+                    localisation: true
+                }
+            },
+            payement: true
+        }
     });
     res.json(commandes);
 });
@@ -101,7 +123,27 @@ router.post('/:id/validate', auth_1.authenticate, (0, auth_1.requireRoles)('admi
 router.get('/me', auth_1.authenticate, (0, auth_1.requireRoles)('client', 'vendeur'), async (req, res) => {
     const orders = await prisma_1.default.commande.findMany({
         where: { usersId: req.user.id },
-        include: { ligneCommande: true, payement: true }
+        include: {
+            ligneCommande: {
+                include: {
+                    produit: {
+                        include: {
+                            productImages: true,
+                            categorie: true,
+                            vendeur: {
+                                select: {
+                                    id: true,
+                                    nom: true,
+                                    telephone: true,
+                                    localisation: true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            payement: true
+        }
     });
     res.json(orders);
 });
@@ -151,5 +193,64 @@ router.post('/:id/deliver', auth_1.authenticate, (0, auth_1.requireRoles)('admin
         ]);
     }
     res.json(updated);
+});
+/**
+ * 📌 Confirmation de livraison (client ou vendeur)
+ */
+router.post('/:id/confirm-delivery', auth_1.authenticate, (0, auth_1.requireRoles)('client', 'vendeur'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        // Vérifier que la commande existe et appartient à l'utilisateur ou contient ses produits
+        const commande = await prisma_1.default.commande.findUnique({
+            where: { id },
+            include: {
+                ligneCommande: {
+                    include: { produit: true }
+                },
+                users: true
+            }
+        });
+        if (!commande) {
+            return res.status(404).json({ message: 'Commande introuvable' });
+        }
+        // Vérifier les permissions
+        const isOwner = commande.usersId === req.user.id;
+        const isVendor = req.user.role === 'vendeur' &&
+            commande.ligneCommande.some(ligne => ligne.produit.vendeurId === req.user.id);
+        if (!isOwner && !isVendor) {
+            return res.status(403).json({ message: 'Accès refusé à cette commande' });
+        }
+        // Vérifier que la commande est en cours de livraison
+        if (commande.status !== 'en_cours_pour_la_livraison') {
+            return res.status(400).json({
+                message: 'Cette commande ne peut pas être confirmée comme livrée. Statut actuel: ' + commande.status
+            });
+        }
+        // Mettre à jour le statut
+        const updated = await prisma_1.default.commande.update({
+            where: { id },
+            data: { status: 'livree' },
+            include: {
+                users: true,
+                ligneCommande: {
+                    include: { produit: true }
+                }
+            }
+        });
+        // Envoyer notification
+        if (updated.users.expoPushToken) {
+            await (0, notifications_1.sendExpoNotificationsAsync)([
+                (0, notifications_1.buildMessage)(updated.users.expoPushToken, 'Livraison confirmée', `Votre commande #${updated.id} a été confirmée comme livrée.`)
+            ]);
+        }
+        res.json({
+            message: 'Livraison confirmée avec succès',
+            commande: updated
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur confirmation livraison:', error);
+        return res.status(500).json({ message: 'Erreur serveur lors de la confirmation de livraison' });
+    }
 });
 exports.default = router;

@@ -79,20 +79,15 @@ const registerSchema = z.object({
   nom: z.string().min(2),
   role: z.enum(['client', 'vendeur']).optional().default('client'),
   photoProfil: z.string().url().optional(),
+  // Champs obligatoires pour tous les utilisateurs
+  localisation: z.string().trim().min(1),
+  telephone: telephoneInput,
   // Champs spécifiques aux vendeurs
-  localisation: z.string().trim().min(1).optional(),
-  telephone: telephoneInput.optional(),
   typeCouture: normalizeTypeCoutureInput.optional(),
   commentaire: z.string().optional(),
   specialite: normalizeSpecialiteInput.optional()
 }).superRefine((data, ctx) => {
   if (data.role === 'vendeur') {
-    if (!data.localisation) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'localisation est requis pour un vendeur', path: ['localisation'] });
-    }
-    if (!data.telephone) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'telephone est requis pour un vendeur', path: ['telephone'] });
-    }
     if (!data.typeCouture || data.typeCouture.length === 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'typeCouture est requis (au moins une valeur)', path: ['typeCouture'] });
     }

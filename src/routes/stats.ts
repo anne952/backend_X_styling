@@ -72,4 +72,76 @@ router.get('/vendeur/:id', authenticate, async (req, res) => {
   });
 });
 
+/**
+ * 📌 Gains du vendeur (ses ventes)
+ */
+router.get('/vendeur/earnings', authenticate, requireRoles('vendeur'), async (req, res) => {
+  try {
+    const vendeurId = req.user!.id;
+
+    // Récupérer tous les produits du vendeur
+    const produits = await prisma.produit.findMany({ 
+      where: { vendeurId },
+      select: { id: true }
+    });
+    const produitIds = produits.map(p => p.id);
+
+    if (produitIds.length === 0) {
+      return res.json({
+        totalGains: 0,
+        nombreVentes: 0,
+        commandes: []
+      });
+    }
+
+    // Récupérer les commandes contenant ses produits
+    const commandes = await prisma.commande.findMany({
+      where: { 
+        ligneCommande: { 
+          some: { produitId: { in: produitIds } } 
+        }
+      },
+      include: { 
+        ligneCommande: {
+          where: { produitId: { in: produitIds } },
+          include: { produit: true }
+        },
+        users: {
+          select: { nom: true, email: true }
+        }
+      }
+    });
+
+    // Calculer les gains totaux
+    let totalGains = 0;
+    commandes.forEach(commande => {
+      commande.ligneCommande.forEach(ligne => {
+        totalGains += Number(ligne.total);
+      });
+    });
+
+    res.json({
+      totalGains,
+      nombreVentes: commandes.length,
+      commandes: commandes.map(commande => ({
+        id: commande.id,
+        date: commande.date,
+        montant: commande.montant,
+        status: commande.status,
+        client: commande.users,
+        produitsVendus: commande.ligneCommande.map(ligne => ({
+          produit: ligne.produit.nom,
+          quantite: ligne.quantite,
+          prixUnitaire: ligne.prixUnitaire,
+          total: ligne.total
+        }))
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur calcul gains vendeur:', error);
+    return res.status(500).json({ message: 'Erreur serveur lors du calcul des gains' });
+  }
+});
+
 export default router;

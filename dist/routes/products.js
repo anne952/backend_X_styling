@@ -16,7 +16,7 @@ router.get("/:id/vendeur", async (req, res) => {
     const produit = await prisma_1.default.produit.findUnique({
         where: { id },
         include: {
-            vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
+            vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true, nom: true } }
         }
     });
     if (!produit)
@@ -25,6 +25,7 @@ router.get("/:id/vendeur", async (req, res) => {
         produitId: produit.id,
         vendeur: produit.vendeur ? {
             id: produit.vendeur.id,
+            nom: produit.vendeur.nom,
             email: produit.vendeur.email,
             telephone: produit.vendeur.telephone,
             photoProfil: produit.vendeur.photoProfil,
@@ -38,7 +39,7 @@ router.get("/:id/vendeur", async (req, res) => {
 router.get("/vendeur", async (req, res) => {
     const produits = await prisma_1.default.produit.findMany({
         include: {
-            vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } }
+            vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true, nom: true } }
         }
     });
     // On retourne uniquement les infos vendeur pour chaque produit
@@ -46,6 +47,7 @@ router.get("/vendeur", async (req, res) => {
         produitId: p.id,
         vendeur: p.vendeur ? {
             id: p.vendeur.id,
+            nom: p.vendeur.nom,
             email: p.vendeur.email,
             telephone: p.vendeur.telephone,
             photoProfil: p.vendeur.photoProfil,
@@ -170,7 +172,7 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
                 productImages: true,
                 couleurs: { include: { couleur: true } },
                 tailles: true,
-                vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true } },
+                vendeur: { select: { id: true, email: true, telephone: true, photoProfil: true, localisation: true, commentaire: true, specialite: true, nom: true } },
             },
         });
         const taillesList = (productWithRelations?.tailles || []).map(t => t.taille);
