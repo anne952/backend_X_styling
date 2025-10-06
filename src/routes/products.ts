@@ -91,7 +91,7 @@ router.post(
         prix,
         taille,
         video,
-        images,
+        images
       } = req.body as {
         nom: string;
         description: string;
@@ -100,6 +100,7 @@ router.post(
         video?: string;
         images?: string[];
       };
+      const prixPromotion = (req.body as any).prixPromotion;
 
       const categorieId = Number((req.body as any).categorieId);
       // Supporte soit un id unique (couleurId), soit un tableau (couleurIds)
@@ -177,13 +178,14 @@ router.post(
           categorieId,
           vendeurId,
           video,
+          prixPromotion: prixPromotion ? new Prisma.Decimal(prixPromotion) : null,
           couleurs: { create: couleurIds.map((cid) => ({ couleurId: cid })) },
           tailles: { create: tailles.map(t => ({ taille: t })) },
         },
       });
       
-// --- Console log pour vérifier la création
-console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${vendeurId}`);
+      // --- Console log pour vérifier la création
+      console.log(`Produit créé : id=${created.id}, nom=${created.nom}, vendeurId=${vendeurId}`);
       // --- Créer les images du produit
       const productImages = images.map((url: string) => ({
         url,

@@ -80,7 +80,8 @@ router.get("/", async (req, res) => {
 // --- POST produit (admin ou vendeur)
 router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur"), async (req, res) => {
     try {
-        const { nom, description, prix, taille, video, images, } = req.body;
+        const { nom, description, prix, taille, video, images } = req.body;
+        const prixPromotion = req.body.prixPromotion;
         const categorieId = Number(req.body.categorieId);
         // Supporte soit un id unique (couleurId), soit un tableau (couleurIds)
         const rawCouleurId = req.body.couleurId;
@@ -152,6 +153,7 @@ router.post("/", auth_1.authenticate, (0, auth_1.requireRoles)("admin", "vendeur
                 categorieId,
                 vendeurId,
                 video,
+                prixPromotion: prixPromotion ? new client_1.Prisma.Decimal(prixPromotion) : null,
                 couleurs: { create: couleurIds.map((cid) => ({ couleurId: cid })) },
                 tailles: { create: tailles.map(t => ({ taille: t })) },
             },
